@@ -1,24 +1,46 @@
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
-
 import time
 import datetime
 import gspread
-import json
-
 import numpy as np
-np.random.seed(1234)
 
-baselines = ['gt', 'emage', 'lsm', 'mamba', 'cfm_inpainting']
-models = ['gt', 'cfm', 'emage', 'lsm', 'mamba']
+def claim_row_atomically(worksheet, row_idx_to_claim, claim_value):
+    """
+    Attempts to claim a row by atomically changing column B from '0' to claim_value.
+    Returns True if successful, False otherwise.
+    """
+    try:
+        find_replace_request = {
+            'findReplace': {
+                'find': '0',  # Value indicating 'available'
+                'replacement': '1', # Value indicating 'claimed by this user'
+                'matchCase': True,
+                'matchEntireCell': True,
+                'range': {
+                    'sheetId': worksheet.id,
+                    'startRowIndex': row_idx_to_claim - 1,  # API is 0-indexed
+                    'endRowIndex': row_idx_to_claim,
+                    'startColumnIndex': 1,  # Assuming status is in Column B (0-indexed B is 1)
+                    'endColumnIndex': 2,
+                }
+            }
+        }
+        body = {'requests': [find_replace_request]}
+        response = worksheet.spreadsheet.batch_update(body)
+        
+        # Check if the replacement was made
+        # The exact structure of response['replies'] might need verification
+        if response['replies'] and response['replies'][0].get('findReplace'):
+            occurrences_changed = response['replies'][0]['findReplace'].get('occurrencesChanged', 0)
+            return occurrences_changed > 0
+        return False
+    except Exception as e:
+        st.error(f"Error during atomic claim for row {row_idx_to_claim}: {e}")
+        return False
 
-def get_video_url(row, name=''):
-    group_id = int(row['group_id'])
-    video_url = f'https://wu-cloud-bucket.s3.ap-northeast-3.amazonaws.com/2025_ral_exp/groups/group_{group_id}/{name}.mp4'
-    return video_url
-
-# Assign variables
+# Retrieve data
 if 'sheet_rows' not in st.session_state:
+    st.warning('Retrieving data. Please wait...')
     try:
         credentials = st.secrets['connections']['gsheets']
         gc = gspread.service_account_from_dict(info=credentials)
@@ -37,20 +59,37 @@ if 'sheet_rows' not in st.session_state:
     status_list = worksheet.col_values(2)[1:]
     batch_cells = []
     for idx, status in enumerate(status_list):
+        if len(sheet_rows) == 3: # Each experiment contains N groups
+            break
+        if status != '0':
+            continue
         row_idx = idx + 2
         status_label = f'B{row_idx}'
-        if (status == '0') and (worksheet.acell(status_label).value == '0'):
-            worksheet.update_acell(status_label, '1')
+        if worksheet.acell(status_label).value != '0':
+            continue
+        
+        if claim_row_atomically(worksheet, row_idx, st.session_state['userid']):
             batch_cells.append({'range': f'AG{row_idx}', 'values': [[datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')]]})
             batch_cells.append({'range': f'AD{row_idx}', 'values': [[st.session_state['userid']]]})
             batch_cells.append({'range': f'AE{row_idx}', 'values': [[st.session_state['gender']]]})
             batch_cells.append({'range': f'AF{row_idx}', 'values': [[st.session_state['age']]]})
             row = worksheet.row_values(row_idx)
             sheet_rows.append({k:v for k, v in zip(columns, row)})
-        if len(sheet_rows) == 3: # Each experiment contains N groups
-            break
+
+        time.sleep(0.1)
+        
     worksheet.batch_update(batch_cells)
     st.session_state['sheet_rows'] = sheet_rows
+    st.rerun()
+
+np.random.seed(1234)
+baselines = ['gt', 'emage', 'lsm', 'mamba', 'cfm_inpainting']
+models = ['gt', 'cfm', 'emage', 'lsm', 'mamba']
+
+def get_video_url(row, name=''):
+    group_id = int(row['group_id'])
+    video_url = f'https://wu-cloud-bucket.s3.ap-northeast-3.amazonaws.com/2025_ral_exp/groups/group_{group_id}/{name}.mp4'
+    return video_url
 
 if 'pairs' not in st.session_state:
     pairs = []
