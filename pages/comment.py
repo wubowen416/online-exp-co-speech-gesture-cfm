@@ -1,6 +1,7 @@
 import streamlit as st
 
 st.title('Comment')
+st.warning('Do not refresh the page or close the tab! Your data will be lost!')
 
 comment = st.text_area(
     label='Comment',

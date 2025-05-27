@@ -155,6 +155,7 @@ pair_idx = 0
 
 # Interface
 st.title('Experiment')
+st.warning('Do not refresh the page or close the tab! Your data will be lost!')
 pbar_text = 'Progress'
 pbar = st.progress(0, text=f'{pbar_text}: {0}/{num_pairs}')
 
@@ -175,9 +176,9 @@ def exp_fragment():
         left_video_url, right_video_url = right_video_url, left_video_url
     section = pair['section']
     if section == 'A':
-        question = '(No audio) Which of the gestures do you think is more natural in terms of human-likeness, smoothness and comfortablenss? '
+        question = '(No audio) Which of the two gestures appears more natural in terms of human-likeness, smoothness and comfortableness?'
     elif section == 'B':
-        question = '(With audio) Which of the gestures do you think synchronize more with the spoken utterance?'
+        question = '(With audio) Which of the two gestures corresponds better with the spoken utterance?'
     else:
         raise ValueError('Unsupported section')
 
