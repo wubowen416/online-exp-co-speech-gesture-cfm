@@ -4,7 +4,7 @@ import datetime
 import gspread
 import numpy as np
 
-def claim_row_atomically(worksheet, row_idx_to_claim, claim_value):
+def claim_row_atomically(worksheet, row_idx_to_claim):
     """
     Attempts to claim a row by atomically changing column B from '0' to claim_value.
     Returns True if successful, False otherwise.
@@ -68,7 +68,7 @@ if 'sheet_rows' not in st.session_state:
         if worksheet.acell(status_label).value != '0':
             continue
         
-        if claim_row_atomically(worksheet, row_idx, st.session_state['userid']):
+        if claim_row_atomically(worksheet, row_idx):
             batch_cells.append({'range': f'AG{row_idx}', 'values': [[datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')]]})
             batch_cells.append({'range': f'AD{row_idx}', 'values': [[st.session_state['userid']]]})
             batch_cells.append({'range': f'AE{row_idx}', 'values': [[st.session_state['gender']]]})
