@@ -1,5 +1,7 @@
+import gspread.utils
 import streamlit as st
 import datetime
+import gspread
 
 st.title('Outro')
 
@@ -8,20 +10,19 @@ if 'uploaded' not in st.session_state:
 
 if not st.session_state['uploaded']:
     st.warning('Do not close the tab! Data is uploading!')
-    # Modify df
-    df = st.session_state['df']
+    # Write to worksheet
+    worksheet: gspread.Worksheet = st.session_state['worksheet']
+    columns: list = st.session_state['columns']
+    batch_cells = []
     for result in st.session_state['results']:
-        rows = df['group_id'] == result['group_id']
-        df.loc[rows, f'{result["section"]}-{result["ref"]}'] = result['value']
-        df.loc[rows, 'done'] = 1
-        df.loc[rows, 'userid'] = str(st.session_state['userid'])
-        df.loc[rows, 'gender'] = st.session_state['gender']
-        df.loc[rows, 'age'] = st.session_state['age']
-        df.loc[rows, 'start_time'] = st.session_state['start_time']
-        df.loc[rows, 'end_time'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    # Write df to google sheet
-    conn = st.session_state['conn']
-    conn.update(data=df)
+        row_idx = int(result['group_id']) + 2
+        col_name = f'{result["section"]}-{result["ref"]}'
+        col_idx = columns.index(col_name) + 1
+        batch_cells.append({'range': gspread.utils.rowcol_to_a1(row_idx, col_idx), 'values': [[result['value']]]})
+        batch_cells.append({'range': f'B{row_idx}', 'values': [['2']]})
+        batch_cells.append({'range': f'AH{row_idx}', 'values': [[datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')]]})
+        batch_cells.append({'range': f'AI{row_idx}', 'values': [[st.session_state['comment']]]})
+    worksheet.batch_update(batch_cells)
     st.session_state['uploaded'] = True
     st.rerun()
 else:
