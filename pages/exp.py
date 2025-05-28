@@ -176,32 +176,27 @@ def exp_fragment():
         left_video_url, right_video_url = right_video_url, left_video_url
     section = pair['section']
     if section == 'A':
-        question = '(No audio) Which of the two gestures appears more natural in terms of human-likeness, smoothness and comfortableness?'
+        question = 'Which of the two gestures appears more natural in terms of human-likeness, smoothness and comfortableness?'
+        including_audio = '(no audio)'
     elif section == 'B':
-        question = '(With audio) Which of the two gestures corresponds better with the spoken utterance?'
+        question = 'Which of the two gestures corresponds better with the spoken utterance?'
+        including_audio = '(with audio)'
     else:
         raise ValueError('Unsupported section')
 
     # Place two videos
     with st.container(border=True):
-        st.header('Watch videos and answer the question')
+        
+        st.header(f'Watch videos {including_audio} and answer:')
+        st.subheader(question)
         columns = st.columns(2, border=True)
         columns[0].subheader('Left')
         columns[0].video(left_video_url)
         columns[1].subheader('Right')
         columns[1].video(right_video_url)
-
-        # Add custom CSS for larger radio buttons
-        st.markdown("""
-        <style>
-        div[data-testid="stRadio"] p {
-            font-size: 1.2rem;
-        }
-        </style>
-        """, unsafe_allow_html=True)
         
         choice = st.radio(
-            label=f'Q: {question}',
+            label='Select your preference for the above question:',
             options=['Left', 'Equal', 'Right'],
             index=None,
             key=f'choice_{st.session_state["pair_idx"]}',
