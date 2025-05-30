@@ -149,9 +149,13 @@ def on_form_submitted():
 
     # Update pair
     st.session_state['pair_idx'] += 1
+    st.session_state['dummy_video_postfix'] = int(time.time())
 
 num_pairs = len(st.session_state['pairs'])
 pair_idx = 0
+# A random identifier to prevent video from continue playing if the urls are the same
+if 'dummy_video_postfix' not in st.session_state:
+    st.session_state['dummy_video_postfix'] = int(time.time())
 
 # Interface
 st.title('Experiment')
@@ -176,7 +180,7 @@ def exp_fragment():
         left_video_url, right_video_url = right_video_url, left_video_url
     section = pair['section']
     if section == 'A':
-        question = 'Which of the two gestures appears more natural in terms of human-likeness, smoothness and comfortableness?'
+        question = 'Which of the two gestures appears more natural in terms of human-likeness, smoothness, and comfortableness?'
         including_audio = '(no audio)'
     elif section == 'B':
         question = 'Which of the two gestures corresponds better with the spoken utterance?'
@@ -191,9 +195,9 @@ def exp_fragment():
         st.subheader(question)
         columns = st.columns(2, border=True)
         columns[0].subheader('Left')
-        columns[0].video(left_video_url)
+        columns[0].video(f'{left_video_url}?t={st.session_state["dummy_video_postfix"]}')
         columns[1].subheader('Right')
-        columns[1].video(right_video_url)
+        columns[1].video(f'{right_video_url}?t={st.session_state["dummy_video_postfix"]}')
         
         choice = st.radio(
             label='Select your preference for the above question:',
